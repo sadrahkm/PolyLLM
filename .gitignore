@@ -1,0 +1,8 @@
+src/__pycharm__
+src/embed/__pycharm__
+output/pairs/*
+env/
+src/configs.py
+.idea/
+src/__pycache__/functions.cpython-311.pyc
+*.pyc
