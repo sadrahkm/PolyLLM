@@ -18,7 +18,7 @@ from params import settings
 pdrugs_embeddings = load_embedding('drug_pairs','chemberta_simcse_sum')
 pdrugs_embeddings['Drug_ID'] = [i for i in range(0, len(pdrugs_embeddings))]
 
-labels_list = load_pkl('labels_list_dict_pub.pkl')
+labels_list = load_pkl('labels_list_dict.pkl')
 
 y_ungrouped_df = explode_labels(labels_list)
 ungrouped_df = pd.concat([pdrugs_embeddings.reset_index(drop=True), y_ungrouped_df], axis=1).reset_index(drop=True)
