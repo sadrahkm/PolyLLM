@@ -1,6 +1,6 @@
 from numpy import floating
 
-from config import EMBEDDING_PATH, BASE_PATH
+from config import EMBEDDING_PATH, BASE_PATH, DATA_PATH
 
 import os
 import glob
@@ -29,13 +29,13 @@ def log(columns: List[Any], values: List[Any], filepath: str) -> None:
 def load_embedding(dataset_name: str, model: str) -> pd.DataFrame:
 
     PATH = None
-    for path in glob.iglob(f'{EMBEDDING_PATH}/pairs/*'):
+    for path in glob.iglob(f'{EMBEDDING_PATH}/*'):
         if dataset_name in path and model in path:
             PATH = path
     return pd.read_csv(PATH, sep='\t')
 
 def load_data(file_path: str, **kwargs) -> pd.DataFrame:
-    full_path = os.path.join(BASE_PATH, file_path)
+    full_path = os.path.join(DATA_PATH, file_path)
     return pd.read_csv(full_path, **kwargs)
 
 
