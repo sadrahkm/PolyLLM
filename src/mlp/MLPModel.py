@@ -1,8 +1,6 @@
 from keras.models import Sequential
-from keras.layers import Dense, Dropout
-from keras.layers import LeakyReLU
-from keras.layers import BatchNormalization
-from tensorflow.keras import optimizers, losses, metrics
+from keras.layers import Dense, Dropout, BatchNormalization, LeakyReLU
+from keras import optimizers, losses, metrics
 from typing import List
 
 class MLPModel:
