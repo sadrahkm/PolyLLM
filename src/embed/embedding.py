@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from embed.Embedding import Embedding
 from functions import load_data
-from configs import GPT_TOKEN, BASE_PATH, DATA_PATH, EMBEDDINGS_PATH
+from config import DATA_PATH, EMBEDDING_PATH
 
 pd.set_option('display.max_rows', None)  # Show all rows
 pd.set_option('display.max_columns', None)  # Show all columns
@@ -34,19 +34,21 @@ def fuse_embeddings(vector1, vector2, fuse_method):
 
     return fused
 
-X = load_data(DATA_PATH + '/X_preprocessed_pub.csv', sep='\t') # synergy
+X = load_data(DATA_PATH + '/grouped/X_preprocessed.csv') # synergy_pubchem
 print("Loaded the data!")
 smiles1 = X['SMILES1'].values #X['smiles_1'].values
 smiles2 = X['SMILES2'].values #X['smiles_2'].values
 unique_drugs_smiles, indices = np.unique(np.concatenate((smiles1, smiles2)), return_inverse=True)
 
+smiles1 = pd.DataFrame(smiles1, columns=["smiles"])
+smiles2 = pd.DataFrame(smiles2, columns=["smiles"])
 model_names = [
-    'chemberta_simcse',
+    # 'chemberta_simcse',
     # 'sbert',
     # 'gpt',
     # 'mol2vec',
     # 'bert',
-    # 'doc2vec',
+    'doc2vec',
     # 'angle',
     # 'chemberta_deepchem',
     # 'bert_smiles'
@@ -59,12 +61,12 @@ for model_name in model_names:
     print("Got the Unique Drug Embeddings!")
     unique_drugs_embeddings['smiles'] = unique_drugs_smiles
     unique_drugs_embeddings.set_index('smiles', inplace=True)
-    smiles1_embedding = np.array(pd.DataFrame(smiles1).set_index(0).join(unique_drugs_embeddings, how='left'))
-    smiles2_embedding = np.array(pd.DataFrame(smiles2).set_index(0).join(unique_drugs_embeddings, how='left'))
+    smiles1_embedding = np.array(smiles1.merge(unique_drugs_embeddings, how='left', left_on='smiles', right_on='smiles').drop(columns=['smiles']))
+    smiles2_embedding = np.array(smiles2.merge(unique_drugs_embeddings, how='left', left_on='smiles', right_on='smiles').drop(columns=['smiles']))
     print("Got the SMILES1 and SMILES2 Embeddings!")
     for method in fusion_methods:
         fused_embeddings = fuse_embeddings(smiles1_embedding, smiles2_embedding, fuse_method=method)
         print("Fused the Embeddings!")
-        path = EMBEDDINGS_PATH + f"/drug_pairs-{model_name}_{method}.csv"
+        path = EMBEDDING_PATH + f"/drug_pairs-{model_name}_{method}.csv"
         pd.DataFrame(fused_embeddings.detach().numpy()).to_csv(path, sep='\t', index=False)
         print("Saved the Embeddings!")
