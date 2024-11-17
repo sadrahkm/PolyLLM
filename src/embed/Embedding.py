@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
+import rdkit
 import deepchem as dc
 import tqdm
 from sentence_transformers import SentenceTransformer
@@ -11,12 +12,11 @@ from transformers import AutoTokenizer, AutoModel, LlamaForCausalLM
 from transformers import BitsAndBytesConfig
 from openai import OpenAI
 
-from secrets import BASE_PATH
-from secrets import GPT_TOKEN
+from config import MODELS_PATH
 
 device = torch.device("cuda")
 
-client = OpenAI(api_key=GPT_TOKEN)
+client = OpenAI(api_key='')
 
 
 class Embedding:
@@ -37,7 +37,6 @@ class Embedding:
 
     def identify_model(self, model_name):
 
-        self.model = self.model.to(device)
         if model_name == 'bert':
             self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
             self.model = AutoModel.from_pretrained('bert-base-uncased', output_hidden_states=True)
@@ -45,8 +44,8 @@ class Embedding:
             self.tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
             self.model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
         elif model_name == 'chemberta_simcse':
-            self.tokenizer = AutoTokenizer.from_pretrained(BASE_PATH + "models/simcsesqrt-model")
-            self.model = AutoModel.from_pretrained(BASE_PATH + "models/simcsesqrt-model")
+            self.tokenizer = AutoTokenizer.from_pretrained(MODELS_PATH + "simcsesqrt-model")
+            self.model = AutoModel.from_pretrained(MODELS_PATH + "simcsesqrt-model")
         elif model_name == 'bert_smiles':
             self.tokenizer = BertTokenizerFast.from_pretrained('unikei/bert-base-smiles')
             self.model = BertModel.from_pretrained('unikei/bert-base-smiles')
@@ -57,6 +56,8 @@ class Embedding:
             return
         else:
             raise Exception(f"Model not found: {model_name}")
+
+        self.model = self.model.to(device)
 
 
     # def llama_embedding(self, token, quantization_config, name='meta-llama/Llama-2-7b-chat-hf', device_map='auto'):
@@ -137,7 +138,7 @@ class Embedding:
         embeddings = []
         documents = [TaggedDocument(doc.split(), [i]) for i, doc in enumerate(self.input)]
         model = Doc2Vec(documents, vector_size=50, window=2, min_count=1, workers=4)
-        matrix = [model.infer_vector(text.split()) for text in self.input]
+        embeddings = [model.infer_vector(text.split()) for text in self.input]
         return embeddings
 
     def mol2vec(self):
