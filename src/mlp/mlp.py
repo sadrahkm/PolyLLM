@@ -1,11 +1,12 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
+from config import LOG_PATH
 from functions import log, load_embedding, load_data, shuffle_df, average_precision_at_k_multi_label#, load_pkl
 # from graph.helpers import explode_labels
-from mlp.MLPModel import MLPModel
+from MLPModel import MLPModel
 from sklearn.model_selection import train_test_split, KFold
-from tensorflow.keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping
 from params import settings
 
 models = [
@@ -26,7 +27,7 @@ models = [
 
 models_agg = [
     # 'chembert_bert_concat',
-    'chemberta_simcse_sum',
+    # 'chemberta_simcse_sum',
     # 'chembert_bert_mult',
     # 'chembert_bert_mean',
     # 'bert_concat',
@@ -42,7 +43,7 @@ models_agg = [
     # 'mol2vec_mult',
     # 'mol2vec_mean',
     # 'doc2vec_concat',
-    # 'doc2vec_sum',
+    'doc2vec_sum',
     # 'doc2vec_mult',
     # 'doc2vec_mean',
     # 'gpt_concat',
@@ -61,7 +62,7 @@ for model_name in models_agg:
                 print("\n")
 
                 X = shuffle_df(load_embedding('drug_pairs', model_name))
-                y = shuffle_df(load_data('labels_hot_preprocessed_pub.csv', sep='\t'))
+                y = shuffle_df(load_data('grouped/labels_hot_preprocessed.csv', sep='\t'))
                 X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size = 0.1, random_state=1)
 
                 print('\nSizes:')
@@ -106,7 +107,7 @@ for model_name in models_agg:
                         verbose=1,
                         epochs=settings['model']['mlp']['epochs'],
                         callbacks=[early_stopping],
-                        workers=4,
+                        # workers=4,
                         # batch_size=128
                     )
                     histories.append(history)
@@ -118,13 +119,13 @@ for model_name in models_agg:
                 print("================================================")
                 print("\n")
 
-                test_metrics = model.evaluate(X_test, y_test, use_multiprocessing=False, verbose=1)
+                test_metrics = model.evaluate(X_test, y_test, verbose=1)
                 y_pred = model.predict(X_test, verbose=1)
                 k = settings['model']['mlp']['k']
                 test_ap_at_k = average_precision_at_k_multi_label(y_test, y_pred, k=k)
 
                 log(
                     columns=['Model','Loss','AUC','AUPRC',f'AP@{k}', 'Comment'],
-                    values=[model_name, test_metrics[0], test_metrics[1], test_metrics[2], test_ap_at_k, 'Only Dropout'],
-                    filepath='mlp.csv'
+                    values=[model_name, test_metrics[0], test_metrics[1], test_metrics[2], test_ap_at_k, ''],
+                    filepath= LOG_PATH + 'mlp.csv'
                 )
