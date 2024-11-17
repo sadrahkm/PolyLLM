@@ -1,8 +1,8 @@
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
-from functions import log, load_embedding, load_data, shuffle_df, average_precision_at_k_multi_label, load_pkl
-from graph.helpers import explode_labels
+from functions import log, load_embedding, load_data, shuffle_df, average_precision_at_k_multi_label#, load_pkl
+# from graph.helpers import explode_labels
 from mlp.MLPModel import MLPModel
 from sklearn.model_selection import train_test_split, KFold
 from tensorflow.keras.callbacks import EarlyStopping
