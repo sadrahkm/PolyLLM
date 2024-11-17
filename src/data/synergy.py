@@ -1,17 +1,17 @@
 import pandas as pd
 import numpy as np
 
-from configs import DATA_PATH
+from config import DATA_PATH
+
+from data.helpers import log_unique_ids
+from data.poly import DDI_graph
 
 df = pd.read_csv(DATA_PATH + '/labeled_triples_m.csv')
 
-unique_drugs = set(pd.concat([df['drug_1'], df['drug_2']]))
 
-with open('unique_ids.txt', 'w') as file:
-    for i in unique_drugs:
-        file.write(str(i) + '\n')
+log_unique_ids(df, 'drug_1', 'drug_2', DATA_PATH + 'unique_ids_synergy.txt')
 
-pubchem_output = pd.read_csv('pubchem_output.csv')
+pubchem_output = pd.read_csv(DATA_PATH + '/pubchem_output_synergy.csv')
 
 cid_smiles = pubchem_output[[' cid', 'isosmiles']]
 
@@ -24,4 +24,4 @@ final_df = pd.DataFrame({
     'label': df['label']
 })
 
-final_df.to_csv(DATA_PATH + '/synergy.csv', index=False, sep='\t')
+final_df.to_csv(DATA_PATH + '/synergy_pubchem.csv', index=False, sep='\t')
