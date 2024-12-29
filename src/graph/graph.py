@@ -1,6 +1,6 @@
-from configs import OUTPUT_PATH, LOGS_PATH
+from config import CHECKPOINT_PATH, DATA_PATH, LOG_PATH
 from embed.Embedding import Embedding
-from functions import load_pkl, load_embedding, average_precision_at_k, log
+from functions import load_pkl, load_embedding, log
 import pandas as pd
 import numpy as np
 import tqdm
@@ -9,16 +9,19 @@ import torch.nn.functional as F
 from EarlyStopping import EarlyStopping
 from Model import Model
 from eval import calculate_metrics
+from helpers import set_seed
 from helpers import explode_labels, generate_zero_embeddings, construct_hetero_data, link_loader, split_data
 from params import settings
+from accelerate import Accelerator
 
 
 
+set_seed(42)
 
 pdrugs_embeddings = load_embedding('drug_pairs','chemberta_simcse_sum')
 pdrugs_embeddings['Drug_ID'] = [i for i in range(0, len(pdrugs_embeddings))]
 
-labels_list = load_pkl('labels_list_dict.pkl')
+labels_list = load_pkl(DATA_PATH + 'grouped/labels_list_dict.pkl')
 
 y_ungrouped_df = explode_labels(labels_list)
 ungrouped_df = pd.concat([pdrugs_embeddings.reset_index(drop=True), y_ungrouped_df], axis=1).reset_index(drop=True)
@@ -41,17 +44,30 @@ print("Data Preparation Completed!")
 test_aucs = []
 test_auprcs = []
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+accelerator = Accelerator()
+device = accelerator.device
 print(f"Device: '{device}'")
 
 for iteration in range(settings['model']['gnn']['iter']):
 
     for model_name in settings['model']['gnn']['model_names']:
+        set_seed(42)
+        # pdrugs_embeddings = load_embedding('drug_pairs', model_name)
+        # pdrugs_embeddings['Drug_ID'] = [i for i in range(0, len(pdrugs_embeddings))]
+        # ungrouped_df = pd.concat([pdrugs_embeddings.reset_index(drop=True), y_ungrouped_df], axis=1).reset_index(
+        #     drop=True)
+        # edges = pd.DataFrame({'src': ungrouped_df['Drug_ID'], 'dst': mapping_ses})
+        # pdrugs_zeros = generate_zero_embeddings(pdrugs_embeddings.shape[0], 200)
+        # labels_zeros = generate_zero_embeddings(labels_embeddings.shape[0], 768)
+        #
+        # edge_index = torch.tensor(np.array(edges)).t().contiguous()
+
 
         print('\n')
         print(f'======================= {model_name} =======================')
         print('\n')
         if model_name != 'zeros':
+            pdrugs_embeddings = load_embedding('drug_pairs', model_name)
             pdrugs = pdrugs_embeddings.iloc[:, :-1]
             labels = labels_embeddings
         else:
@@ -67,10 +83,13 @@ for iteration in range(settings['model']['gnn']['iter']):
         val_loader = link_loader(val_data, batch_size=2048, shuffle=False)
         test_loader = link_loader(test_data, batch_size=2048, shuffle=False)
 
+
         model = Model(data, hidden_channels=settings['model']['gnn']['hidden_channels'], pdrugs_size=pdrugs.shape[1]).to(device)
         optimizer = torch.optim.Adam(model.parameters(), lr=settings['model']['gnn']['lr'])
-        earlystopping = EarlyStopping(patience=2, path=f'{OUTPUT_PATH}/checkpoints/checkpoint_{model_name}.pt')
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
+
+        model, optimizer, train_loader = accelerator.prepare(model, optimizer, train_loader)
+        earlystopping = EarlyStopping(patience=2, path=f'{CHECKPOINT_PATH}/checkpoint_{model_name}.pt')
+        # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=2.0)
 
         for epoch in range(settings['model']['gnn']['epochs']):
 
@@ -85,7 +104,8 @@ for iteration in range(settings['model']['gnn']['iter']):
                 sampled_data.to(device)
                 pred, edge_label = model(sampled_data, is_neg_sampling=True)
                 loss = F.binary_cross_entropy_with_logits(pred, edge_label)
-                loss.backward()
+                # loss.backward()
+                accelerator.backward(loss)
                 optimizer.step()
 
                 batch_size = edge_label.size(0)
@@ -100,6 +120,7 @@ for iteration in range(settings['model']['gnn']['iter']):
             print(f"Training Loss: {total_loss / total_examples:.4f} | Training AUC: {train_auc1: .4f}, {train_auc2: .4f} | Training AUPRC: {train_auprc: .4f} | Training AP@50: {train_ap_at_k: .4f}")
 
             model.eval()
+            model, val_loader = accelerator.prepare(model, val_loader)
             val_total_loss = 0
             val_total_examples = 0
             val_ground_truths = []
@@ -127,10 +148,11 @@ for iteration in range(settings['model']['gnn']['iter']):
                 break
 
         if earlystopping.early_stop:
-            model.load_state_dict(torch.load(f'{OUTPUT_PATH}/checkpoints/checkpoint_{model_name}.pt'))
+            model.load_state_dict(torch.load(f'{CHECKPOINT_PATH}/checkpoint_{model_name}.pt'))
             print("Best model weights restored.")
 
         model.eval()
+        model, test_loader = accelerator.prepare(model, test_loader)
         test_ground_truths = []
         test_preds = []
 
@@ -154,7 +176,7 @@ for iteration in range(settings['model']['gnn']['iter']):
         log(
             ['Model', 'AUC1', 'AUC2', 'AUPRC', 'AP@50'],
             [model_name, float(test_auc1), test_auc2, test_auprc, test_ap_at_k],
-            LOGS_PATH + f'/gnn_sage_{model_name}.csv'
+            LOG_PATH + f'/gnn_conv_results.csv'
         )
 
         # test_metrics = [test_auc, test_auprc, test_ap_at_k]
