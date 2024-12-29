@@ -7,9 +7,9 @@ from data.helpers import log_unique_ids
 from data.poly import DDI_graph
 
 df = pd.read_csv(DATA_PATH + '/labeled_triples_m.csv')
-
-
-log_unique_ids(df, 'drug_1', 'drug_2', DATA_PATH + 'unique_ids_synergy.txt')
+#
+#
+# log_unique_ids(df, 'drug_1', 'drug_2', DATA_PATH + 'unique_ids_synergy.txt')
 
 pubchem_output = pd.read_csv(DATA_PATH + '/pubchem_output_synergy.csv')
 
