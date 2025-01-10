@@ -9,51 +9,9 @@ from sklearn.model_selection import train_test_split, KFold
 from keras.callbacks import EarlyStopping
 from params import settings
 
-models = [
-    # 'chembert_bert_concat',
-    # 'chembert_bert_attention1',
-    # 'chembert_auto768',
-    # 'bert_concat',
-    # 'bert_auto1536',
-    # 'sbert_concat',
-    # 'sbert_auto768',
-    # 'mol2vec_concat',
-    # 'mol2vec_auto600',
-    # 'doc2vec_concat',
-    # 'doc2vec_auto100'
-    # 'llama_concat',
-    # 'llama_auto8192'
-    ]
-
-models_agg = [
-    # 'chembert_bert_concat',
-    # 'chemberta_simcse_sum',
-    # 'chembert_bert_mult',
-    # 'chembert_bert_mean',
-    # 'bert_concat',
-    # 'bert_sum',
-    # 'bert_mult',
-    # 'bert_mean',
-    # 'sbert_concat',
-    # 'sbert_sum',
-    # 'sbert_mult',
-    # 'sbert_mean',
-    # 'mol2vec_concat',
-    # 'mol2vec_sum',
-    # 'mol2vec_mult',
-    # 'mol2vec_mean',
-    # 'doc2vec_concat',
-    'doc2vec_sum',
-    # 'doc2vec_mult',
-    # 'doc2vec_mean',
-    # 'gpt_concat',
-    # 'gpt_sum',
-    # 'gpt_mult',
-    # 'gpt_mean',
-]
 
 
-for model_name in models_agg:
+for model_name in settings['model']['mlp']['model_names']:
     for neurons_per_layer in settings['model']['mlp']['neurons_per_layer']:
         for lr_rate in settings['model']['mlp']['lr']:
             for dr_rate in settings['model']['mlp']['dropout_rates']:
