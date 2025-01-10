@@ -17,9 +17,10 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 # Usage example:
-set_seed(42)
+set_seed(12)
 
 def explode_labels(labels_list):
+    labels_list = [sorted(lst) for lst in labels_list]
     exploded_labels = pd.Series(labels_list).explode()
     exploded_labels_df = exploded_labels.to_frame()
     exploded_labels_df.columns = ['label']
@@ -77,12 +78,17 @@ def split_data(data):
     )(data)
 
 
-def link_loader(train_data, batch_size=65536, shuffle=True):
+def link_loader(train_data, batch_size=65536, shuffle=True, seed=42):
     edge_label_index = train_data["pdrugs", "associated", "seffect"].edge_label_index
     edge_label = train_data["pdrugs", "associated", "seffect"].edge_label
 
     def worker_init_fn(worker_id):
-        np.random.seed(42 + worker_id)
+        """Ensure workers have different seeds."""
+        np.random.seed(seed + worker_id)
+        random.seed(seed + worker_id)
+
+    # Set the global seed for reproducibility
+    set_seed(seed)
 
     return LinkNeighborLoader(
         data=train_data,
